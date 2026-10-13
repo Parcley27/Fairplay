@@ -37,7 +37,7 @@ public sealed class StreamController : IAsyncDisposable
     public AirPlayStreamer? Streamer => _streamer;
 
     public event Action? Changed;
-    /// <summary>User-facing notification: (title, message, isError).</summary>
+    /// <summary>User-facing notification (title, message, isError). Raised only for failures.</summary>
     public event Action<string, string, bool>? Notify;
 
     public StreamController(Settings settings)
@@ -58,11 +58,7 @@ public sealed class StreamController : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    void Announce(string title, string message, bool error)
-    {
-        (error ? (Action<string>)Log.Warn : Log.Info)($"notify: {title} — {message}");
-        Notify?.Invoke(title, message, error);
-    }
+    void Announce(string title, string message, bool error) => Notify?.Invoke(title, message, error);
 
     async Task DiscoveryLoop()
     {
@@ -154,7 +150,6 @@ public sealed class StreamController : IAsyncDisposable
             Settings.Save();
             if (Settings.SyncVolume && source.Volume is { } v) await PushSyncedVolumeAsync(v);
             Raise();
-            Announce(isReconnect ? "Reconnected" : "Connected", $"Playing this PC's audio on {target.DisplayName}", false);
         }
         finally
         {

@@ -36,7 +36,7 @@ sealed class TrayApp : ApplicationContext
     public const string ExitEventName = @"Local\Fairplay.Exit";
     readonly EventWaitHandle _exitSignal = new(false, EventResetMode.AutoReset, ExitEventName);
 
-    public TrayApp(bool startHidden, bool showMenuForScreenshot = false)
+    public TrayApp(bool showMenuForScreenshot = false)
     {
         var exitWatcher = new Thread(() =>
         {
@@ -131,7 +131,7 @@ sealed class TrayApp : ApplicationContext
 
         exitWatcher.Start();
         // Start once the message loop runs, so continuations (balloons, dialogs) stay on the UI thread.
-        _ui.Post(_ => _ = AutoConnectAsync(startHidden), null);
+        _ui.Post(_ => _ = AutoConnectAsync(), null);
 
         if (showMenuForScreenshot)
         {
@@ -147,13 +147,17 @@ sealed class TrayApp : ApplicationContext
         }
     }
 
-    async Task AutoConnectAsync(bool fromAutostart)
+    /// <summary>
+    /// Runs once at startup and produces the app's single startup notification: where it's playing,
+    /// how to pick a speaker, or (from <see cref="StartAsync"/>) why it couldn't connect.
+    /// After this, notifications only appear when something fails.
+    /// </summary>
+    async Task AutoConnectAsync()
     {
         var s = _controller.Settings;
         if (!s.AutoConnect || s.LastTargetId == null)
         {
-            if (!fromAutostart)
-                Balloon("Fairplay is running", "Click the AirPlay icon in the tray to choose a speaker.", false);
+            Balloon("Fairplay is running", "Click the AirPlay icon in the tray to choose a speaker.", false);
             return;
         }
         // Give discovery a few rounds to find the speaker.
@@ -162,6 +166,8 @@ sealed class TrayApp : ApplicationContext
             if (_controller.FindTarget(s.LastTargetId) is { } t)
             {
                 await StartAsync(t);
+                if (_controller.State == StreamState.Streaming)
+                    Balloon("Fairplay is running", $"Playing this PC's audio on {t.DisplayName}.", false);
                 return;
             }
             await Task.Delay(TimeSpan.FromSeconds(i == 0 ? 3 : 5));
@@ -188,6 +194,7 @@ sealed class TrayApp : ApplicationContext
 
     void Balloon(string title, string message, bool error)
     {
+        Log.Info($"notification: {title} — {message}");
         _tray.BalloonTipTitle = title;
         _tray.BalloonTipText = message;
         _tray.BalloonTipIcon = error ? ToolTipIcon.Warning : ToolTipIcon.Info;

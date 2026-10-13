@@ -24,7 +24,7 @@ static class Program
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => Log.Error($"UI error: {e.Exception}");
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Error($"fatal: {e.ExceptionObject}");
-        Application.Run(new TrayApp(startHidden: args.Contains("--autostart"), showMenuForScreenshot: args.Contains("--show-menu")));
+        Application.Run(new TrayApp(showMenuForScreenshot: args.Contains("--show-menu")));
     }
 }
 

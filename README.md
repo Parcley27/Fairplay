@@ -41,6 +41,10 @@ If the connection drops, Fairplay reconnects by itself. If someone starts playin
 HomePod from a phone, Fairplay steps aside instead of stealing it back (it checks the speaker's
 "session active" flag before reconnecting) and tells you.
 
+Notifications are kept to a minimum: one when Fairplay starts (saying where it's playing), and
+otherwise only when something fails — a speaker can't be reached, or Fairplay gives up
+reconnecting. Short drops that heal themselves are silent; the tray icon turns amber meanwhile.
+
 ### Only some apps on the HomePod
 
 Point Fairplay at a playback device you don't otherwise listen to — e.g. a monitor's HDMI audio
