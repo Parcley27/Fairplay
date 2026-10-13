@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fairplay.Core\Fairplay.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>fairplay</AssemblyName>
+    <!-- ships next to Fairplay.exe, so it needs a distinct name there -->
+    <AssemblyName Condition="'$(Configuration)' == 'Release'">fairplay-cli</AssemblyName>
+    <RootNamespace>Fairplay.Cli</RootNamespace>
+  </PropertyGroup>
+
+</Project>

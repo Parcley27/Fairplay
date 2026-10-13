@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fairplay.Core\Fairplay.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Fairplay</AssemblyName>
+    <RootNamespace>Fairplay.App</RootNamespace>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Version>0.1.0</Version>
+    <ApplicationIcon>Assets\fairplay.ico</ApplicationIcon>
+    <Product>Fairplay</Product>
+    <Description>Play Windows audio on AirPlay 2 speakers</Description>
+  </PropertyGroup>
+
+</Project>
