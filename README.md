@@ -97,3 +97,9 @@ dotnet publish src/Fairplay.Cli -c Release -r win-x64 --self-contained -p:Publis
 Thanks to [pyatv](https://github.com/postlund/pyatv), [OwnTone](https://github.com/owntone/owntone-server)
 and the [openairplay spec](https://openairplay.github.io/airplay-spec/), whose work made this
 possible.
+
+## LLM Usage
+This project was created using Claude to generate most of the code.
+
+## Affiliation
+This project is not affiliated with Microsoft or Apple.
