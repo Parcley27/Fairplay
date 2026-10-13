@@ -278,7 +278,14 @@ public sealed class StreamController : IAsyncDisposable
         return results.Any(b => b);
     }
 
-    /// <summary>Status flag bit 17 = the receiver has an active sender session.</summary>
+    const long SessionActive = 0x20000;
+    const long TightSyncIsGroupLeader = 0x2000;
+
+    /// <summary>
+    /// Status flag bit 17 = the receiver has an active sender session. The stereo-pair member that
+    /// leads tight sync (bit 13) reports that bit permanently — it holds a session with its
+    /// partner — so it's ignored there; the other member still reveals a foreign sender.
+    /// </summary>
     static async Task<bool> IsBusyWithAnotherSenderAsync(AirPlayDevice device, CancellationToken ct)
     {
         try
@@ -286,7 +293,7 @@ public sealed class StreamController : IAsyncDisposable
             using var c = await RtspConnection.ConnectAsync(device.Address, device.Port, ct);
             var r = await c.RequestAsync("GET", "/info", ct: ct);
             if (r.PlistDict.TryGetValue("statusFlags", out var f) && f is long flags)
-                return (flags & 0x20000) != 0;
+                return (flags & SessionActive) != 0 && (flags & TightSyncIsGroupLeader) == 0;
         }
         catch (Exception e)
         {
