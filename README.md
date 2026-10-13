@@ -34,7 +34,7 @@ Everything Windows plays now comes out of the HomePod. From the same menu:
 | **Speaker volume** slider | Sets the HomePod's own volume. |
 | **Windows volume controls the speaker** | Volume keys / the Windows slider / mute drive the HomePod's volume, and the audio is sent at full level (Fairplay undoes Windows' software attenuation). Off by default so connecting never jumps the speaker to your PC's volume. |
 | **Audio source** | *Everything Windows plays* follows the default output device. Or pick one specific playback device (see "Only some apps" below). |
-| **Latency** | 50 ms – 1 s. Lower is better for video; raise it a notch if you hear crackles or dropouts (usually one HomePod with a weak Wi-Fi link). Default 120 ms. |
+| **Latency** slider | 50 ms – 1 s; applied (with a ~1 s reconnect) when you let go. Lower is better for video; raise it a notch if you hear crackles or dropouts (usually one HomePod with a weak Wi-Fi link). Below 80 ms is experimental. Default 120 ms. |
 | **Reconnect to last speaker on start**, **Start with Windows** | What they say. |
 
 If the connection drops, Fairplay reconnects by itself. If someone starts playing on the

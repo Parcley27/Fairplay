@@ -13,15 +13,9 @@ namespace Fairplay.App;
 /// </summary>
 sealed class TrayApp : ApplicationContext
 {
-    static readonly (string Label, int Ms)[] LatencyPresets =
-    [
-        ("Ultra-low — 50 ms (experimental)", 50),
-        ("Lowest — 80 ms", 80),
-        ("Very low — 120 ms", 120),
-        ("Low — 200 ms", 200),
-        ("Balanced — 400 ms", 400),
-        ("Robust — 1 s (busy networks)", 1000),
-    ];
+    /// <summary>Latency slider stops: fine-grained where it matters, coarser for the robust end.</summary>
+    static readonly int[] LatencySteps =
+        [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 175, 200, 250, 300, 400, 500, 750, 1000];
 
     readonly NotifyIcon _tray;
     readonly ContextMenuStrip _menu;
@@ -33,6 +27,11 @@ sealed class TrayApp : ApplicationContext
     LogForm? _logForm;
     bool _updatingSlider;
     readonly System.Windows.Forms.Timer _volumeDebounce = new() { Interval = 120 };
+    readonly TrackBar _latency;
+    readonly ToolStripControlHost _latencyHost;
+    readonly ToolStripLabel _latencyLabel;
+    // Changing latency restarts the stream, so wait until the slider has settled.
+    readonly System.Windows.Forms.Timer _latencyDebounce = new() { Interval = 700 };
 
     public const string ExitEventName = @"Local\Fairplay.Exit";
     readonly EventWaitHandle _exitSignal = new(false, EventResetMode.AutoReset, ExitEventName);
@@ -74,6 +73,40 @@ sealed class TrayApp : ApplicationContext
         };
         _volumeHost = new ToolStripControlHost(_volume) { AutoSize = false, Width = 230, Height = 30, Margin = new Padding(8, 0, 0, 0) };
         _volumeLabel = new ToolStripLabel("Volume") { ForeColor = SystemColors.GrayText };
+
+        _latency = new TrackBar
+        {
+            Minimum = 0,
+            Maximum = LatencySteps.Length - 1,
+            TickStyle = TickStyle.None,
+            AutoSize = false,
+            Height = 28,
+            Width = 220,
+            SmallChange = 1,
+            LargeChange = 3,
+            BackColor = ProfessionalColors.ToolStripDropDownBackground,
+        };
+        _latency.ValueChanged += (_, _) =>
+        {
+            if (_updatingSlider) return;
+            _latencyLabel!.Text = LatencyText(LatencySteps[_latency.Value]);
+            _latencyDebounce.Stop();
+            _latencyDebounce.Start();
+        };
+        _latencyDebounce.Tick += async (_, _) =>
+        {
+            _latencyDebounce.Stop();
+            int ms = LatencySteps[_latency.Value];
+            if (ms == _controller.Settings.LatencyMs) return;
+            _controller.Settings.LatencyMs = ms;
+            await _controller.ApplySettingsAsync();
+        };
+        _latencyHost = new ToolStripControlHost(_latency)
+        {
+            AutoSize = false, Width = 230, Height = 30, Margin = new Padding(8, 0, 0, 0),
+            ToolTipText = "Lower = less delay (better for video). Raise it if you hear crackles or dropouts.",
+        };
+        _latencyLabel = new ToolStripLabel("Latency") { ForeColor = SystemColors.GrayText };
 
         _menu = new ContextMenuStrip { ShowCheckMargin = true, ShowImageMargin = false };
         _volume.BackColor = ProfessionalColors.ToolStripDropDownBackground;
@@ -206,10 +239,12 @@ sealed class TrayApp : ApplicationContext
         _menu.Items.Add(_volumeLabel);
         _menu.Items.Add(_volumeHost);
         SyncSlider();
+        _menu.Items.Add(_latencyLabel);
+        _menu.Items.Add(_latencyHost);
+        SyncLatencySlider();
 
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(BuildSourceMenu());
-        _menu.Items.Add(BuildLatencyMenu());
 
         var sync = new ToolStripMenuItem("Windows volume controls the speaker") { Checked = s.SyncVolume, CheckOnClick = true,
             ToolTipText = "Volume keys and the Windows slider set the speaker's own volume (the audio is sent at full level)." };
@@ -320,21 +355,6 @@ sealed class TrayApp : ApplicationContext
         }
     }
 
-    ToolStripMenuItem BuildLatencyMenu()
-    {
-        var s = _controller.Settings;
-        var root = new ToolStripMenuItem($"Latency ({s.LatencyMs} ms)");
-        if (!LatencyPresets.Any(p => p.Ms == s.LatencyMs))
-            root.DropDownItems.Add(new ToolStripMenuItem($"Current — {s.LatencyMs} ms") { Checked = true, Enabled = false });
-        foreach (var (label, ms) in LatencyPresets)
-        {
-            var item = new ToolStripMenuItem(label) { Checked = s.LatencyMs == ms };
-            item.Click += async (_, _) => { s.LatencyMs = ms; await _controller.ApplySettingsAsync(); };
-            root.DropDownItems.Add(item);
-        }
-        return root;
-    }
-
     async Task StartAsync(AirPlayTarget target)
     {
         bool retry = false;
@@ -387,6 +407,22 @@ sealed class TrayApp : ApplicationContext
             : "Volume (connect to a speaker first)";
     }
 
+    void SyncLatencySlider()
+    {
+        if (_latencyDebounce.Enabled) return; // a drag is still pending; don't snap it back
+        int ms = _controller.Settings.LatencyMs;
+        int nearest = 0;
+        for (int i = 1; i < LatencySteps.Length; i++)
+            if (Math.Abs(LatencySteps[i] - ms) < Math.Abs(LatencySteps[nearest] - ms)) nearest = i;
+        _updatingSlider = true;
+        _latency.Value = nearest;
+        _updatingSlider = false;
+        _latencyLabel.Text = LatencyText(ms);
+    }
+
+    // HomePods report ~70 ms between packet arrival and playback, so below ~80 ms is a gamble.
+    static string LatencyText(int ms) => $"Latency  {ms} ms" + (ms < 80 ? "  (experimental)" : "");
+
     string VolumeText(double fraction) =>
         (_controller.Settings.SyncVolume ? "Volume (Windows + speaker)  " : "Speaker volume  ") + $"{fraction * 100:F0}%";
 
@@ -431,6 +467,7 @@ sealed class TrayApp : ApplicationContext
             _tray.Dispose();
             _menu.Dispose();
             _volumeDebounce.Dispose();
+            _latencyDebounce.Dispose();
         }
         base.Dispose(disposing);
     }
